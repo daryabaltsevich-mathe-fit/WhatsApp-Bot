@@ -1,18 +1,10 @@
-// index.js
+import dotenv from 'dotenv';
 const express = require('express');
 const axios = require('axios');
 const app = express();
 app.use(express.json());
 
-// === CONFIG ===
-const VERIFY_TOKEN = "mytoken";            // Тот же, что в Meta Webhook
-const API_VERSION = "v22.0";
-const PHONE_NUMBER_ID = "861067863758910";   // из Meta WhatsApp
-const WHATSAPP_TOKEN = "EAAK4bmxPgPgBQMPDTq4ZBLRYDQSBOunPaX3ZBiGMJYleRBlW9VBg3VtCDUtWru6i9ozdp8qCmQbuc7gl1c42zNFRdVXBXveOCuBhZALbZBqP8q7uDiUoE0ZACLhqXNqkbWII56SCVe2r9OAbdXE9cwFs0k0FVRF0ChLn6ZB4uNPlxlY45lZASkXuqCt2DNn3ReDC6fHmvFsgN2AwM3rwSEIo8QYnZBVwhP7fVuX1oThyFhNZAZA8jGO7kdSFZANe2ciMxyuQ0xeTSZCZBnCumoH1ymLxX9ZCCcZAX8ZD"; // из Meta WhatsApp
 
-const TRELLO_KEY = "fec045404a8b769939f1ade47752f9f8";       // из Power-Up
-const TRELLO_TOKEN = "ATTA00c1ab21765c2e281478a6425904e076d44619418f24a102e0e5fd62aad0d84305515084";   // из Power-Up
-const TRELLO_LIST_ID = "691ef95c61ad757be0df8dda";      // ID списка в Trello
 
 const TRELLO_LISTS = {
     "Kundenplannung": "691ef95c61ad757be0df8dda",
@@ -28,7 +20,7 @@ app.get('/webhook', (req, res) => {
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
-  if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+  if (mode === 'subscribe' && token === process.env.VERIFY_TOKEN) {
     console.log("Webhook verified");
     res.status(200).send(challenge);
   } else {
@@ -68,8 +60,8 @@ app.post('/webhook', async (req, res) => {
             null,
             {
               params: {
-                key: TRELLO_KEY,
-                token: TRELLO_TOKEN,
+                key: process.env.TRELLO_KEY,
+                token: process.env.TRELLO_TOKEN,
                 idList: state.listId,
                 name: state.title,
                 desc: state.forwarded
@@ -98,10 +90,6 @@ app.post('/webhook', async (req, res) => {
         await sendFinalConfirmButtons(from);
         return res.sendStatus(200);
       }
-
-
-        // await handleListSelection(from, choice, state, res)
-        // return 
 
     }
 
@@ -144,13 +132,13 @@ app.post('/webhook', async (req, res) => {
 // === SEND TEXT ===
 async function sendText(to, body) {
   await axios.post(
-    `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`,
+    `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`,
     {
       messaging_product: "whatsapp",
       to,
       text: { body }
     },
-    { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` } }
+    { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` } }
   );
 }
 
@@ -164,7 +152,7 @@ async function sendListButtons(to) {
         }
     }))
   await axios.post(
-    `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`,
+    `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`,
     {
       messaging_product: "whatsapp",
       to,
@@ -176,14 +164,14 @@ async function sendListButtons(to) {
           buttons
         }}
     },
-    { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` } }
+    { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` } }
   );
 }
 
 // === Send final confirm/cancel buttons ===
 async function sendFinalConfirmButtons(to) {
   await axios.post(
-    `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`,
+    `https://graph.facebook.com/v22.0/${process.env.PHONE_NUMBER_ID}/messages`,
     {
       messaging_product: "whatsapp",
       to,
@@ -199,44 +187,8 @@ async function sendFinalConfirmButtons(to) {
         }
       }
     },
-    { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` } }
+    { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` } }
   );
 }
 
-
-// === HANDLE LIST SELECTION ===
-// async function handleListSelection(from, choice, state, res) {
-//   const listId = TRELLO_LISTS[choice];
-//   console.log(choice, listId, state)
-
-//   if (!listId) {
-//     await sendText(from, "Неизвестный список!");
-//     return res.sendStatus(200);
-//   }
-
-//   // Создаём карточку
-//   await axios.post(
-//     `https://api.trello.com/1/cards`,
-//     null,
-//     {
-//       params: {
-//         key: TRELLO_KEY,
-//         token: TRELLO_TOKEN,
-//         idList: listId,
-//         name: state.title,
-//         desc: state.forwarded
-//       }
-//     }
-//   );
-
-//   await sendText(from, `Карточка создана в списке ${choice}`);
-
-//   // Очистить состояние
-//   chatState[from] = null;
-
-//   res.sendStatus(200);
-// }
-
-
-// === Start server ===
 app.listen(3000, () => console.log("Server running on port 3000"));
